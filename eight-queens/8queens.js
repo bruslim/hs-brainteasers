@@ -2,159 +2,21 @@
 
 'use strict';
 
-function Board(height, width) {
-  Object.defineProperties(this, {
-    _height: {
-      value: height
-    },
-    _width: {
-      value: width
-    }
-  });
+var Board = require('./board.js');
 
-  this.board = [];
-  for(var h = 0; h < height; h++) {
-    var row = [];
-    for(var w = 0; w < width; w++) {
-      row.push({
-        m: 0,
-        q: false
-      });
-    }
-    this.board.push(row);
-  }
-}
+// ======================================================================
+// grunt of algorthim below
 
-Board.prototype = {
-  // O(n)
-  _getXpoints: function(y) {
-    var points = [];
-    for(var x = 0; x < this._width; x++) {
-      points.push({x: x, y:y});
-    }
-    return points;
-  },
-  // O(n)
-  _getYpoints: function(x) {
-    var points = [];
-    for(var y = 0; y < this._height; y++) {
-      points.push({x: x, y:y});
-    }
-    return points;
-  },
-  _getDownSlopePoints: function(x,y) {
-    // go to top left corner of triangle
-    var currentX = x;
-    var currentY = y;
-    while (currentX > 0 && currentY > 0) {
-      currentX--;
-      currentY--;
-    }
-    currentY = Math.max(0,currentY);
-    var points = [];
-    while(currentY < this._height && currentX < this._width) {
-      points.push({
-        x: Math.abs(currentX), 
-        y: Math.abs(currentY)
-      });
-      currentX++;
-      currentY++;
-    }
-    return points;
-  },
-  _getUpSlopePoints: function(x,y) {
-    // go to top right corner of triangle
-    var currentX = x;
-    var currentY = y;
-    while (currentX < (this._width-1) && currentY > 0) {
-      currentX++;
-      currentY--;
-    }
-    currentY = Math.max(0,currentY);
-    var points = [];
-    while(currentY < this._height && currentX >= 0) {
-      points.push({
-        x: Math.abs(currentX), 
-        y: Math.abs(currentY)
-      });
-      currentX--;
-      currentY++;
-    }
-    return points;
-  },
-  _canPlace: function(point) {
-    return this.board[point.y][point.x].m === 0;
-  },
-  _getCheckPoints: function(x, y) {
-    var points = [];
-    points = points.concat(this._getXpoints(y));
-    points = points.concat(this._getYpoints(x));
-    points = points.concat(this._getDownSlopePoints(x,y));
-    points = points.concat(this._getUpSlopePoints(x,y));
-    return points;
-  },
-  canPlaceQueen: function(x, y) {
-    return this._canPlace({x: x, y: y});
-  },
-  _markPoints: function(points) {
-    points.forEach(function(point){
-      this.board[point.y][point.x].m += 1;
-    }, this);
-  },
-  _clearPoints: function(points) {
-    points.forEach(function(point) {
-      this.board[point.y][point.x].m -= 1;
-    }, this);
-  },
-  _markQueen: function(point, points) {
-    this._markPoints(points);
-    this.board[point.y][point.x].q = true;
-  },
-  _clearQueen: function(point, points) {
-    this._clearPoints(points);
-    this.board[point.y][point.x].q = false;
-  },
-  placeQueen: function(x,y) {
-    var points = this._getCheckPoints(x,y);
-    var point = {x: x, y: y};
-    if (!this._canPlace(point)){
-      return false;
-    }
-    this._markQueen(point, points);
-    return true;
-  },
-  removeQueen: function(x,y) {
-    var value = this.board[y][x];
-    if (value.q) {
-      var points = this._getCheckPoints(x,y);
-      this._clearQueen({x:x,y:y},points);
-    }
-  },
-  printBoard: function(counter) {
-    var border = [];
-    for(var w = 0; w < this._width; w++){
-      border.push('=');
-    }
-    if (counter !== undefined || counter !== null) {
-      border.push(counter);
-    }
-    console.log(border.join(' '));
-    this.board.forEach(function(row){
-      var printRow = [];
-      row.forEach(function(value) {
-        printRow.push((value.q === true) ? 'Q' : value.m.toString(16));
-      });
-      console.log(printRow.join(' '));
-    });
-  }
-};
-
-var iterations;
+var queensPlaced, queensRemoved;
 
 function placeQueens(x,y, numQueens) {
-  iterations = 0;
+  queensPlaced = 0;
+  queensRemoved = 0;
   var board = new Board(8,8);
   board.placeQueen(x,y);
+  board.printBoard(
+    '[P] T:'+ 1 +' P:' + (++queensPlaced) + ' R:' + queensRemoved
+  );
   var success = helper(board, {x:x, y:y}, 1, numQueens);
   if (!success) {
     console.log('FAILURE! No solution found.');
@@ -162,31 +24,45 @@ function placeQueens(x,y, numQueens) {
 }
 
 function helper(board, point, current, target) {
+  // base case
   if (current == target) { return true; }
+  
+  // assume false
   var placed = false;
   
   // start at 2 away from center (0)
   var radius = 2; 
   
-  while((radius < (board._width/2+1) || radius < (board._height/2+1)) && !placed) {
+  while(
+    ( // check bounds to reduce iterations
+      (radius) <= (board._width/2) || 
+      (radius) <= (board._height/2)
+    ) && !placed
+  ) {
   
     var points = openPoints(board, point, radius);
-
-
+    
     while(points.length > 0 && !placed) {
       var newPoint = points.shift();
 
       placed = board.placeQueen(newPoint.x, newPoint.y);
 
       if (!placed) { continue; }
-      board.printBoard('PLACED: ' + (++iterations));
+    
+      board.printBoard(
+        '[P] T:'+ (current+1) +' P:' + (++queensPlaced) + ' R:' + queensRemoved
+      );
+      
       if (!helper(board, newPoint, current+1, target)) {
-        board.printBoard('REMOVED: ' + (iterations));
+        board.printBoard(
+          '[R] T:'+ (current+1) +' P:' + (queensPlaced) + ' R:' + (++queensRemoved)
+        );
         board.removeQueen(newPoint.x, newPoint.y);
         placed = false;
       }
     }
     
+    // if we couldn't place it, increase our circle
     if (!placed) {
       radius++;
     }
@@ -194,8 +70,19 @@ function helper(board, point, current, target) {
   return placed;
 }
 
+
+// get a set of "open" points to try
+// based on the radius given
+// for a radius of 2 from the point 'p':
+// n y n y n
+// y n n n y
+// n n p n n
+// y n n n y
+// n y n y n
 function openPoints(board, point, radius) {
   var points = [], x, y;
+  
+  // easier to break it down into 4 problems:
   
   // top row
   y = point.y - radius;
@@ -204,6 +91,7 @@ function openPoints(board, point, radius) {
     for(x = point.x - (radius-1); x <= (point.x + (radius -1)); x++) {
       // eliminate the intersecting column (x != point.x)
       if (x >= 0 && x < board._width && x != point.x) {
+        // add the point to the list
         points.push({x:x,y:y});
       }
     }
@@ -228,6 +116,7 @@ function openPoints(board, point, radius) {
       }
     }    
   }
+  
   // right col
   x = point.x + radius;
   if (x < board._width) {
@@ -240,6 +129,10 @@ function openPoints(board, point, radius) {
       
   return points;
 }
+
+
+// ======================================================================
+// testing functions
 
 
 function canPlaceTest(height, width) {
@@ -269,5 +162,8 @@ function removeAndPrint(board, x, y) {
 
 //removeAndPrint(board, 4,4);
 
+
+// ======================================================================
+// actual call to start algorithm
 placeQueens(0,0,8);
 
