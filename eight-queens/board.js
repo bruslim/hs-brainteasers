@@ -105,8 +105,9 @@ Board.prototype = {
     points = points.concat(this._getYpoints(x));
     points = points.concat(this._getDownSlopePoints(x,y));
     points = points.concat(this._getUpSlopePoints(x,y));
-    // yes there are duplicate points
-    // but checking them for canPlace is O(1)
+    // yes there are duplicate points - but its okay
+    // there are 4 of the same point
+    // the intersection of all 4 lines
     return points;
   },
   // function isn't used in algorithm

@@ -54,10 +54,10 @@ function helper(board, point, current, target) {
       );
       
       if (!helper(board, newPoint, current+1, target)) {
+        board.removeQueen(newPoint.x, newPoint.y);
         board.printBoard(
           '[R] T:'+ (current+1) +' P:' + (queensPlaced) + ' R:' + (++queensRemoved)
         );
-        board.removeQueen(newPoint.x, newPoint.y);
         placed = false;
       }
     }
@@ -165,5 +165,9 @@ function removeAndPrint(board, x, y) {
 
 // ======================================================================
 // actual call to start algorithm
-placeQueens(0,0,8);
+//console.log(JSON.stringify(process.argv));
+placeQueens(
+  parseInt(process.argv[2]),
+  parseInt(process.argv[3]),
+  8);
 
