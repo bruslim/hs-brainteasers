@@ -7,25 +7,33 @@ var Board = require('./board.js');
 // ======================================================================
 // grunt of algorthim below
 
-var queensPlaced, queensRemoved;
+
 
 function placeQueens(x,y, numQueens) {
-  queensPlaced = 0;
-  queensRemoved = 0;
   var board = new Board(8,8);
+  // first queen
   board.placeQueen(x,y);
   board.printBoard(
-    '[P] T:'+ 1 +' P:' + (++queensPlaced) + ' R:' + queensRemoved
+    '[P] Q/T/F/P/R: ' + [
+      board.queenCount,
+      board.tries,
+      board.failures, 
+      board.placed,
+      board.removed
+    ].join('/')
   );
-  var success = helper(board, {x:x, y:y}, 1, numQueens);
+  var success = helper(board, {x:x, y:y}, numQueens);
   if (!success) {
     console.log('FAILURE! No solution found.');
   }
 }
 
-function helper(board, point, current, target) {
+var helperCallCount  = 0;
+function helper(board, point, target) {
+  helperCallCount += 1;
+  
   // base case
-  if (current == target) { return true; }
+  if (board.queenCount == target) { return true; }
   
   // assume false
   var placed = false;
@@ -35,14 +43,17 @@ function helper(board, point, current, target) {
   
   while(
     ( // check bounds to reduce iterations
-      (radius) <= (board._width/2) || 
-      (radius) <= (board._height/2)
+      ((point.x - radius) >= 0 || (point.x + radius) <= (board.width)) || 
+      ((point.y - radius) >= 0 || (point.y + radius) <= (board.height))
+//      ((radius) <= (board.width/2)) || 
+//      ((radius) <= (board.height/2))
     ) && !placed
   ) {
   
     var points = openPoints(board, point, radius);
     
     while(points.length > 0 && !placed) {
+      
       var newPoint = points.shift();
 
       placed = board.placeQueen(newPoint.x, newPoint.y);
@@ -50,13 +61,25 @@ function helper(board, point, current, target) {
       if (!placed) { continue; }
     
       board.printBoard(
-        '[P] T:'+ (current+1) +' P:' + (++queensPlaced) + ' R:' + queensRemoved
+        '[P] Q/T/F/P/R: ' + [
+          board.queenCount,
+          board.tries, 
+          board.failures,
+          board.placed,
+          board.removed
+        ].join('/')
       );
       
-      if (!helper(board, newPoint, current+1, target)) {
+      if (!helper(board, newPoint, target)) {
         board.removeQueen(newPoint.x, newPoint.y);
         board.printBoard(
-          '[R] T:'+ (current+1) +' P:' + (queensPlaced) + ' R:' + (++queensRemoved)
+          '[R] Q/T/F/P/R: ' + [
+            board.queenCount,
+            board.tries, 
+            board.failures,
+            board.placed,
+            board.removed
+          ].join('/')
         );
         placed = false;
       }
@@ -80,53 +103,55 @@ function helper(board, point, current, target) {
 // y n n n y
 // n y n y n
 function openPoints(board, point, radius) {
-  var points = [], x, y;
+  var points = [], x, y, topY, botY, firstX, lastX;
   
-  // easier to break it down into 4 problems:
+  topY   = point.y - radius;
+  topY   = topY < 0 ? point.y : topY;
   
-  // top row
-  y = point.y - radius;
-  if (y >= 0) {
-    // eliminate the corners (radius-1)
-    for(x = point.x - (radius-1); x <= (point.x + (radius -1)); x++) {
-      // eliminate the intersecting column (x != point.x)
-      if (x >= 0 && x < board._width && x != point.x) {
-        // add the point to the list
-        points.push({x:x,y:y});
-      }
+  botY   = point.y + radius;
+  botY   = botY >= board.height ? point.y : botY;
+  
+  // compute the first col x value
+  firstX = point.x - radius;
+  firstX = firstX < 0 ? point.x : firstX;
+  
+  // compute the last col x value
+  lastX = point.x + radius;
+  lastX = lastX >= board.width ? point.x : lastX;
+  
+  
+  // easier to break it down into 4 problems
+  
+  // top and bottom rows 
+  for(
+    x =  firstX + 1; 
+    x <= lastX  - 1; 
+    x++
+  ) {
+    if (x === point.x) { continue; }
+    if (topY >= 0) { 
+      points.push({x: x, y: topY}); 
+    }
+    if (botY <  board.height) {
+      points.push({x: x, y: botY}); 
     }
   }
   
-  // bottom row
-  y = point.y + radius;
-  if (y < board._height) {
-    for(x = point.x - (radius-1); x <= (point.x + (radius-1)); x++) {
-      if (x >= 0 && x < board._width && x != point.x) {
-        points.push({x:x,y:y});
-      }
+  // left and right cols
+  for(
+    y =  topY + 1; 
+    y <= botY - 1; 
+    y++
+  ) {
+    if (y === point.y) { continue; }
+    if (firstX >= 0) { 
+      points.push({x: firstX, y: y}); 
+    }
+    if (lastX  <  board.width) {
+      points.push({x: lastX , y: y}); 
     }
   }
   
-  // left col
-  x = point.x - radius;
-  if (x >= 0) {
-    for(y = point.y - (radius-1); y < (point.y + (radius-1)); y++) {
-      if (y >= 0 && y < board._height && y != point.y) {
-        points.push({x:x,y:y});
-      }
-    }    
-  }
-  
-  // right col
-  x = point.x + radius;
-  if (x < board._width) {
-    for(y = point.y - (radius-1); y < (point.y + (radius-1)); y++) {
-      if (y >= 0 && y < board._height && y != point.y) {
-        points.push({x:x,y:y});
-      }
-    }    
-  }
-      
   return points;
 }
 
@@ -170,4 +195,5 @@ placeQueens(
   parseInt(process.argv[2]),
   parseInt(process.argv[3]),
   8);
-
+console.log('= = = = = = = =');
+console.log('recursive calls:', helperCallCount);
